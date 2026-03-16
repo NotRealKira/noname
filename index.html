@@ -951,14 +951,46 @@ class LexusHubMarketplace {
         });
     }
 
-    saveProfileData() {
+    async saveProfileData() {
         const newName = document.getElementById('profileNameInput').value.trim();
         if (!newName) { showNotif('❌ Display name cannot be empty', 'error'); return; }
-        this.profile.name = newName;
-        this.saveProfile();
-        this.renderProfileHeader();
-        this.renderProfile();
-        showNotif('Profile updated!', 'success');
+
+        const btn = document.getElementById('saveProfileBtn');
+        btn.disabled = true;
+        btn.textContent = '⏳ Checking...';
+
+        try {
+            // If the name hasn't changed, skip the uniqueness check
+            if (newName.toLowerCase() !== (this.profile.name || '').toLowerCase()) {
+                // Check if any row in the DB uses this display name with a DIFFERENT device hash
+                const myHash = this.deviceHash.slice(0, 64);
+                const { data, error } = await sb
+                    .from('builds')
+                    .select('id, ip_hash')
+                    .ilike('owner', newName)
+                    .limit(1);
+
+                if (error) throw new Error('Could not verify name availability');
+
+                if (data && data.length > 0 && data[0].ip_hash !== myHash) {
+                    showNotif('❌ That display name is already taken!', 'error');
+                    btn.disabled = false;
+                    btn.textContent = '💾 Save Profile';
+                    return;
+                }
+            }
+
+            this.profile.name = newName;
+            this.saveProfile();
+            this.renderProfileHeader();
+            this.renderProfile();
+            showNotif('✅ Profile updated!', 'success');
+        } catch(e) {
+            showNotif('❌ ' + e.message, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '💾 Save Profile';
+        }
     }
 
     // ── Upload handlers ────────────────────────────────────────────────────────
@@ -1176,11 +1208,14 @@ class LexusHubMarketplace {
     }
 
     isOwner(row) {
-        return row.owner === this.profile.name;
+        // Match by device hash (ip_hash) so only the actual uploader can delete
+        const myHash = this.deviceHash.slice(0, 64);
+        return row.ip_hash === myHash;
     }
 
     ownerButtons(id, type) {
-        return this.isOwner({ owner: this.builds.concat(this.sells, this.trades).find(r => r.id === id)?.owner })
+        const row = this.builds.concat(this.sells, this.trades).find(r => r.id === id);
+        return (row && this.isOwner(row))
             ? `<button class="edit-btn"   onclick="marketplace.editItem(${id},'${type}')">✏️ Edit</button>
                <button class="delete-btn" onclick="marketplace.deleteItem(${id},'${type}')">🗑️ Delete</button>`
             : '';
@@ -1220,9 +1255,6 @@ class LexusHubMarketplace {
                         <span>👁️ ${b.views||0} views</span>
                         <span>📥 ${b.downloads||0} downloads</span>
                     </div>
-                    ${b.owner === this.profile.name ? `
-                        <button class="edit-btn"   onclick="marketplace.editItem(${b.id},'build')">✏️ Edit</button>
-                        <button class="delete-btn" onclick="marketplace.deleteItem(${b.id},'build')">🗑️ Delete</button>` : ''}
                     <button class="download-btn" data-id="${b.id}">📥 Download Build</button>
                 </div>
             </div>
@@ -1249,9 +1281,6 @@ class LexusHubMarketplace {
                     ${this.ownerTag(s)}
                     <div class="description">${this.escHtml(s.data?.description)}</div>
                     <div class="upload-time">📅 ${new Date(s.upload_date).toLocaleString()}</div>
-                    ${s.owner === this.profile.name ? `
-                        <button class="edit-btn"   onclick="marketplace.editItem(${s.id},'sell')">✏️ Edit</button>
-                        <button class="delete-btn" onclick="marketplace.deleteItem(${s.id},'sell')">🗑️ Delete</button>` : ''}
                     <button class="contact-btn" onclick="alert('Contact: ${this.escHtml(s.discord)}')">💬 Contact Seller</button>
                 </div>
             </div>
@@ -1271,9 +1300,6 @@ class LexusHubMarketplace {
                     ${this.ownerTag(t)}
                     <div class="description">${this.escHtml(t.data?.description)}</div>
                     <div class="upload-time">📅 ${new Date(t.upload_date).toLocaleString()}</div>
-                    ${t.owner === this.profile.name ? `
-                        <button class="edit-btn"   onclick="marketplace.editItem(${t.id},'trade')">✏️ Edit</button>
-                        <button class="delete-btn" onclick="marketplace.deleteItem(${t.id},'trade')">🗑️ Delete</button>` : ''}
                     <button class="contact-btn" onclick="alert('Contact: ${this.escHtml(t.discord)}')">🔄 Contact Trader</button>
                 </div>
             </div>
