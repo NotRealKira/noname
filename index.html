@@ -377,7 +377,7 @@ async function uploadBuild() {
         const title = document.getElementById('buildTitle').value.trim();
         const desc = document.getElementById('buildDesc').value.trim();
 
-        if (!file || !file.name.endsWith('.build')) throw 'Need .build file';
+        if (!file || !file.name.endsWith('.Build')) throw 'Need .build file';
 
         let imgUrl = null;
         if (img) {
@@ -547,4 +547,3 @@ window.addEventListener('DOMContentLoaded', async () => {
 </script>
 </body>
 </html>
-```
