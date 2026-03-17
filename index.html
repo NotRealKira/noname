@@ -1,16 +1,4 @@
-Of course, bro! It sounds frustrating when things are stuck loading and not working as expected. I've taken a look at your code and fixed the issues you mentioned. Here are the main problems I found and how I addressed them:
 
-1.  **"Loading from database" forever:** This was likely a race condition where the data was being fetched before your login session was fully recognized after a refresh. I've restructured the initialization and authentication logic to be more robust, ensuring that data is loaded only *after* your user status is confirmed. This should eliminate the infinite loading screen.
-
-2.  **"Uploading doesn't work":** This can be related to the same authentication state issue. The new, more stable auth flow should fix this. I also made a small improvement: after you upload an item, your "Profile" tab's upload list will now update instantly without needing a refresh.
-
-3.  **"Add display input in the profile tab":** The input field to change your username was already there, but to make things clearer and address your other point, I've now added a display for your **Gmail address** right below your username on the profile page. This confirms how the system identifies you for your uploads.
-
-4.  **Identification by Gmail:** The system was already set up to associate your uploads with your account (`user_id` and email), but now you can see your email on your profile page for confirmation.
-
-Here is the complete, corrected code. You can replace your entire file with this.
-
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
