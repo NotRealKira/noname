@@ -1,64 +1,541 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Website Updating</title>
-  <style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LexusHub Library</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
-    body {
-      margin: 0;
-      padding: 0;
-      height: 100vh;
-      background: url('https://source.unsplash.com/1600x900/?technology,code') 
-      background-size: cover;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-family: Arial, sans-serif;
-      overflow: hidden;
-    }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #0a0a0a; color: #fff; min-height: 100vh; }
 
-    
-    .blur-overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      backdrop-filter: blur(8px);
-      background-color: rgba(0, 0, 0, 0.4);
-      z-index: 1;
-    }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
 
-    
-    .message {
-      position: relative;
-      z-index: 2;
-      text-align: center;
-      color: white;
-      padding: 30px 50px;
-      border-radius: 10px;
-      background-color: rgba(0, 0, 0, 0.6);
-      box-shadow: 0 0 20px rgba(0,0,0,0.5);
-    }
+        .header {
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+            border-radius: 25px; padding: 40px; text-align: center;
+            margin-bottom: 30px; box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+        }
+        .header h1 {
+            font-size: 3.2em; font-weight: 800;
+            background: linear-gradient(135deg, #00d4ff, #5b8bf8, #ff6b9d);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
 
-    .message h1 {
-      margin: 0 0 10px;
-      font-size: 2em;
-    }
+        .tab-buttons { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; margin-bottom: 40px; }
+        .tab-button {
+            padding: 15px 35px; background: rgba(255,255,255,0.1); color: #fff;
+            border-radius: 50px; font-weight: 600; cursor: pointer; border: none;
+            transition: all 0.3s;
+        }
+        .tab-button:hover, .tab-button.active { background: linear-gradient(135deg, #00d4ff, #5b8bf8); }
 
-    .message p {
-      margin: 0;
-      font-size: 1.2em;
-    }
-  </style>
+        .tab-content { display: none; animation: fade 0.5s; }
+        .tab-content.active { display: block; }
+        @keyframes fade { from { opacity:0; transform:translateY(20px); } to { opacity:1; } }
+
+        .upload-form {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(300px,1fr));
+            gap: 25px; max-width: 1000px; margin: 0 auto 40px;
+            background: rgba(255,255,255,0.03); padding: 30px; border-radius: 20px;
+        }
+        .form-group label { display: block; margin-bottom: 10px; font-weight: 600; }
+        .form-group input, .form-group textarea {
+            width: 100%; padding: 15px; border-radius: 15px;
+            border: 2px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1);
+            color: #fff; font-size: 16px;
+        }
+        .upload-btn {
+            background: linear-gradient(135deg, #00d4ff, #5b8bf8);
+            color: #fff; border: none; padding: 18px; border-radius: 15px;
+            font-size: 16px; font-weight: 700; cursor: pointer;
+            grid-column: 1 / -1;
+        }
+        .upload-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .notification-container { position: fixed; top: 20px; right: 20px; z-index: 10000; }
+        .notification {
+            background: rgba(0,212,255,0.95); padding: 15px 20px; border-radius: 12px;
+            margin-bottom: 10px; font-weight: 600;
+            transform: translateX(400px); opacity: 0; transition: 0.4s;
+        }
+        .notification.show { transform: translateX(0); opacity: 1; }
+        .notification.success { background: rgba(0,255,136,0.95); }
+        .notification.error { background: rgba(255,71,87,0.95); }
+        .notification.warning { background: rgba(255,210,63,0.95); }
+
+        .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px,1fr)); gap: 30px; }
+        .image-card {
+            background: rgba(255,255,255,0.05); border-radius: 20px; overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+        .preview-wrapper { height: 220px; overflow: hidden; }
+        .preview-wrapper img { width: 100%; height: 100%; object-fit: cover; }
+        .no-preview { height: 220px; display: flex; align-items: center; justify-content: center; color: #888; }
+        .card-content { padding: 25px; }
+        .title { font-weight: 700; font-size: 1.3em; margin-bottom: 10px; }
+        .price { color: #00ff88; font-size: 1.2em; font-weight: 800; }
+        .owner-info { color: #aaa; margin-bottom: 10px; font-size: 0.95em; display: flex; align-items: center; gap: 8px; }
+        .owner-info img { width: 24px; height: 24px; border-radius: 50%; }
+        .description { color: #bbb; font-size: 0.95em; margin-bottom: 15px; }
+        .btn { display: block; width: 100%; padding: 12px; border-radius: 12px; border: none; font-weight: 600; cursor: pointer; margin-top: 8px; color: #fff; }
+        .btn-green { background: linear-gradient(135deg, #00ff88, #00cc6a); }
+        .btn-red { background: linear-gradient(135deg, #ff4757, #ff3838); font-size: 13px; padding: 10px; }
+        .btn-gmail {
+            background: linear-gradient(135deg, #EA4335, #FBBC05);
+            color: #fff; border: none; padding: 14px 28px; border-radius: 12px;
+            font-size: 15px; font-weight: 700; cursor: pointer;
+            display: inline-flex; align-items: center; gap: 10px;
+        }
+
+        .profile-header { display: flex; align-items: center; gap: 25px; padding: 30px; background: rgba(255,255,255,0.05); border-radius: 20px; margin-bottom: 40px; }
+        .profile-avatar { width: 90px; height: 90px; border-radius: 50%; overflow: hidden; background: #333; display: flex; align-items: center; justify-content: center; font-size: 36px; }
+        .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .profile-info h2 { font-size: 2em; background: linear-gradient(135deg, #00d4ff, #fff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .profile-email { color: #88ccff; font-size: 14px; margin-top: 5px; }
+
+        .login-required-warning {
+            background: rgba(255,210,63,0.15);
+            border: 1px solid rgba(255,210,63,0.4);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            margin-bottom: 20px;
+            color: #ffd23f;
+            font-weight: 600;
+        }
+
+        .privacy-note {
+            background: rgba(0,212,255,0.1); border: 1px solid rgba(0,212,255,0.3);
+            padding: 15px; border-radius: 12px; margin-top: 15px;
+            font-size: 14px; color: #88ccff; line-height: 1.6;
+        }
+
+        .username-input {
+            background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.2);
+            padding: 12px 15px; border-radius: 12px; color: #fff; font-size: 16px;
+            width: 100%; margin-bottom: 10px;
+        }
+
+        .loading { text-align: center; padding: 40px; color: #888; }
+    </style>
 </head>
 <body>
-  <div class="blur-overlay"></div>
-  <div class="message">
-    <h1>Website is Updating</h1>
-    <p>We are fixing some bugs. The site will be back within 1–2 days.</p>
-  </div>
+<div class="notification-container" id="notifBox"></div>
+
+<div class="container">
+    <div class="header">
+        <h1>🚀 LexusHub Library</h1>
+        <p>Roblox Builds Marketplace</p>
+    </div>
+
+    <div class="tab-buttons">
+        <button class="tab-button active" data-tab="builds">Builds</button>
+        <button class="tab-button" data-tab="sell">Sell</button>
+        <button class="tab-button" data-tab="trade">Trade</button>
+        <button class="tab-button" data-tab="script">Script</button>
+        <button class="tab-button" data-tab="profile">Profile</button>
+    </div>
+
+    <!-- BUILDS -->
+    <div id="builds" class="tab-content active">
+        <div id="buildLoginWarning" class="login-required-warning" style="display: none;">
+            ⚠️ You must login with Gmail to upload builds
+        </div>
+        <form class="upload-form" id="buildForm">
+            <div class="form-group"><label>Preview (Roblox Screenshot Only - Optional)</label><input type="file" id="buildImg" accept="image/*"></div>
+            <div class="form-group"><label>Build File (.build) *</label><input type="file" id="buildFile" accept=".build" required></div>
+            <div class="form-group"><label>Title *</label><input type="text" id="buildTitle" required></div>
+            <div class="form-group"><label>Description</label><textarea id="buildDesc"></textarea></div>
+            <button type="submit" class="upload-btn" id="buildBtn">📤 Upload Build</button>
+        </form>
+        <div class="gallery" id="buildGal"><div class="loading">⏳ Loading...</div></div>
+    </div>
+
+    <!-- SELL -->
+    <div id="sell" class="tab-content">
+        <div id="sellLoginWarning" class="login-required-warning" style="display: none;">
+            ⚠️ You must login with Gmail to list items for sale
+        </div>
+        <form class="upload-form" id="sellForm">
+            <div class="form-group"><label>Preview Image (Roblox Only) *</label><input type="file" id="sellImg" accept="image/*" required></div>
+            <div class="form-group"><label>Title *</label><input type="text" id="sellTitle" required></div>
+            <div class="form-group"><label>Description</label><textarea id="sellDesc"></textarea></div>
+            <div class="form-group"><label>Price (Robux) *</label><input type="number" id="sellPrice" min="1" required></div>
+            <button type="submit" class="upload-btn" id="sellBtn">💎 List for Sale</button>
+        </form>
+        <div class="gallery" id="sellGal"><div class="loading">⏳ Loading...</div></div>
+    </div>
+
+    <!-- TRADE -->
+    <div id="trade" class="tab-content">
+        <div id="tradeLoginWarning" class="login-required-warning" style="display: none;">
+            ⚠️ You must login with Gmail to post trades
+        </div>
+        <form class="upload-form" id="tradeForm">
+            <div class="form-group"><label>Preview Image (Roblox Only) *</label><input type="file" id="tradeImg" accept="image/*" required></div>
+            <div class="form-group"><label>Title *</label><input type="text" id="tradeTitle" required></div>
+            <div class="form-group"><label>Description</label><textarea id="tradeDesc"></textarea></div>
+            <button type="submit" class="upload-btn" id="tradeBtn">🔄 Post Trade</button>
+        </form>
+        <div class="gallery" id="tradeGal"><div class="loading">⏳ Loading...</div></div>
+    </div>
+
+    <!-- SCRIPT -->
+    <div id="script" class="tab-content">
+        <div style="text-align:center;padding:40px;">
+            <img src="https://imgur.com/ZkebzWz" style="max-width:400px;border-radius:15px;border:3px solid #00d4ff;">
+            <div style="background:rgba(0,0,0,0.5);border:1px solid #00d4ff;border-radius:10px;padding:20px;margin:20px 0;font-family:monospace;color:#00ff88;word-break:break-all;">
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/amd156935-create/BoatbuilderhubIsShitLexusHubIsBestAlso/main/9b21a6b954470aed.lua.txt"))()
+            </div>
+            <button class="btn btn-green" onclick="navigator.clipboard.writeText(document.querySelector('#script pre')?.textContent || '').then(()=>showNotif('✅ Copied!','success'))" style="width:auto;display:inline-block;">📋 Copy</button>
+        </div>
+    </div>
+
+    <!-- PROFILE -->
+    <div id="profile" class="tab-content">
+        <div class="profile-header">
+            <div class="profile-avatar" id="pAv"><span>?</span></div>
+            <div class="profile-info">
+                <h2 id="pName">Not logged in</h2>
+                <p id="pEmail" class="profile-email"></p>
+                <div id="authSection"></div>
+            </div>
+        </div>
+
+        <div id="usernameSection" style="display:none;">
+            <h3 style="color:#00d4ff;margin-bottom:15px;">✏️ Set Your Display Name</h3>
+            <input type="text" id="usernameInput" class="username-input" placeholder="Enter your display username..." maxlength="20">
+            <button class="btn btn-green" onclick="saveUsername()" style="margin-top:10px;">💾 Save</button>
+            <p class="privacy-note" style="margin-top:20px;">
+                🔒 <strong>Privacy:</strong> We will never share, sell or do anything with your email. We only use it internally to identify which files belong to you.
+            </p>
+        </div>
+
+        <h3 style="color:#00d4ff;margin:40px 0 20px;">📊 Your Uploads</h3>
+        <div class="gallery" id="myGal"></div>
+    </div>
+</div>
+
+<script>
+// ─── Supabase ───────────────────────────────────────────────────────
+const SUPABASE_URL = 'https://puhusbessxmmstfxdowr.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB1aHVzYmVzc3htbXN0Znhkb3dyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM2NjU4MjIsImV4cCI6MjA4OTI0MTgyMn0.7tW48EhCOz6H4cDxF6AuqUH9m8SoXWwj2Cn_rqucm1w';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+// ─── State ─────────────────────────────────────────────────────────
+let user = null;
+
+// ─── Notifications ─────────────────────────────────────────────────
+function showNotif(msg, type) {
+    const box = document.getElementById('notifBox');
+    const el = document.createElement('div');
+    el.className = `notification ${type}`;
+    el.textContent = (type==='success'?'✅':type==='error'?'❌':type==='warning'?'⚠️':'ℹ️') + ' ' + msg;
+    box.appendChild(el);
+    requestAnimationFrame(()=>el.classList.add('show'));
+    setTimeout(()=>{ el.classList.remove('show'); setTimeout(()=>el.remove(),400) }, 4000);
+}
+
+// ─── Auth ──────────────────────────────────────────────────────────
+async function initAuth() {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session?.user) user = session.user;
+
+    sb.auth.onAuthStateChange((evt, sess) => {
+        user = sess?.user || null;
+        renderAuth();
+        updateUploadForms();
+    });
+
+    renderAuth();
+    updateUploadForms();
+}
+
+async function gmailLogin() {
+    const { error } = await sb.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: 'https://lexushubcatalogue.netlify.app/' }
+    });
+    if (error) showNotif(error.message, 'error');
+}
+
+async function logout() {
+    await sb.auth.signOut();
+    user = null;
+    renderAuth();
+    updateUploadForms();
+    showNotif('👋 Logged out', 'info');
+}
+
+function updateUploadForms() {
+    const loggedIn = !!user;
+
+    document.getElementById('buildLoginWarning').style.display = loggedIn ? 'none' : 'block';
+    document.getElementById('sellLoginWarning').style.display = loggedIn ? 'none' : 'block';
+    document.getElementById('tradeLoginWarning').style.display = loggedIn ? 'none' : 'block';
+
+    document.getElementById('buildBtn').disabled = !loggedIn;
+    document.getElementById('sellBtn').disabled = !loggedIn;
+    document.getElementById('tradeBtn').disabled = !loggedIn;
+}
+
+function renderAuth() {
+    const sec = document.getElementById('authSection');
+    const unSec = document.getElementById('usernameSection');
+
+    if (user) {
+        document.getElementById('pAv').innerHTML = user.user_metadata?.picture ? `<img src="${user.user_metadata.picture}">` : user.email?.charAt(0).toUpperCase();
+        document.getElementById('pName').textContent = localStorage.getItem('lh_username') || user.user_metadata?.name || 'Set display name below';
+        document.getElementById('pEmail').textContent = user.email;
+
+        sec.innerHTML = `<button class="btn btn-red" onclick="logout()" style="width:auto;">🚪 Logout</button>`;
+        unSec.style.display = 'block';
+        document.getElementById('usernameInput').value = localStorage.getItem('lh_username') || '';
+
+        loadMyUploads();
+    } else {
+        document.getElementById('pAv').innerHTML = '<span>?</span>';
+        document.getElementById('pName').textContent = 'Not logged in';
+        document.getElementById('pEmail').textContent = '';
+        sec.innerHTML = `<button class="btn-gmail" onclick="gmailLogin()">
+            <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#fff" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#fff" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#fff" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#fff" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+            Sign in with Gmail
+        </button>`;
+        unSec.style.display = 'none';
+        document.getElementById('myGal').innerHTML = '<p style="text-align:center;color:#888;padding:40px;">Login to see your uploads</p>';
+    }
+}
+
+// ─── Username ──────────────────────────────────────────────────────
+function saveUsername() {
+    const val = document.getElementById('usernameInput').value.trim().slice(0, 20);
+    if (!val) { showNotif('Username cannot be empty', 'error'); return; }
+    localStorage.setItem('lh_username', val);
+    document.getElementById('pName').textContent = val;
+    showNotif('✅ Display name saved!', 'success');
+}
+
+// ─── Roblox Image Scanner ──────────────────────────────────────────
+async function isRobloxImage(file) {
+    const fn = file.name.toLowerCase();
+    if (fn.includes('roblox') || fn.includes('com_roblox')) return true;
+
+    return new Promise(resolve=>{
+        const rd = new FileReader();
+        rd.onload = e => {
+            try {
+                const arr = new Uint8Array(e.target.result);
+                const txt = new TextDecoder('utf-8',{fatal:false}).decode(arr);
+                const markers = ['com.roblox.client', 'com_roblox_client', 'com.roblox', 'RobloxPlayerBeta'];
+                resolve(markers.some(m => txt.includes(m)));
+            } catch { resolve(false); }
+        };
+        rd.readAsArrayBuffer(file.slice(0, 131072));
+    });
+}
+
+// ─── Cloudinary ────────────────────────────────────────────────────
+async function uploadCloud(file) {
+    if (file.size > 5*1024*1024) throw 'Max 5MB file size';
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('upload_preset', 'Lexushub database');
+    const res = await fetch('https://api.cloudinary.com/v1_1/dqhzdbwl2/raw/upload', { method:'POST', body:fd });
+    const j = await res.json();
+    if (!res.ok) throw j.error?.message || 'Upload failed';
+    return j.secure_url;
+}
+
+// ─── Database ──────────────────────────────────────────────────────
+async function insert(r) {
+    const { data, error } = await sb.from('builds').insert([r]).select().single();
+    if (error) throw error;
+    return data;
+}
+
+async function loadAll(type) {
+    const { data } = await sb.from('builds').select('*').eq('type', type).order('upload_date', { ascending: false });
+    return data || [];
+}
+
+async function deleteItem(id) {
+    const { error } = await sb.from('builds').delete().eq('id', id);
+    if (error) throw error;
+}
+
+// ─── Upload Handlers ───────────────────────────────────────────────
+async function uploadBuild() {
+    if (!user) { showNotif('⚠️ Login first', 'warning'); switchTab('profile'); return; }
+    const btn = document.getElementById('buildBtn'); btn.disabled=1; btn.textContent='⏳';
+    try {
+        const img = document.getElementById('buildImg').files[0];
+        const file = document.getElementById('buildFile').files[0];
+        const title = document.getElementById('buildTitle').value.trim();
+        const desc = document.getElementById('buildDesc').value.trim();
+
+        if (!file || !file.name.endsWith('.build')) throw 'Need .build file';
+
+        let imgUrl = null;
+        if (img) {
+            showNotif('🔄 Checking Roblox screenshot...', 'info');
+            const valid = await isRobloxImage(img);
+            if (!valid) throw 'Image rejected: This is not a Roblox screenshot';
+            imgUrl = await uploadCloud(img);
+        }
+
+        const fileUrl = await uploadCloud(file);
+
+        await insert({
+            type: 'build',
+            owner_email: user.email,
+            owner_name: localStorage.getItem('lh_username') || user.user_metadata?.name,
+            owner_avatar: user.user_metadata?.picture,
+            data: { title, description: desc, previewImage: imgUrl },
+            upload_date: new Date().toISOString(),
+            build_file_url: fileUrl,
+            build_file_name: file.name
+        });
+
+        document.getElementById('buildForm').reset();
+        showNotif('✅ Build uploaded!', 'success');
+        loadAllAndRender();
+    } catch(e) { showNotif('❌ '+e, 'error'); }
+    btn.disabled=0; btn.textContent='📤 Upload Build';
+}
+
+async function uploadSell() {
+    if (!user) { showNotif('⚠️ Login first', 'warning'); switchTab('profile'); return; }
+    const btn = document.getElementById('sellBtn'); btn.disabled=1; btn.textContent='⏳';
+    try {
+        const img = document.getElementById('sellImg').files[0];
+        if (!img) throw 'Need preview image';
+
+        showNotif('🔄 Checking Roblox screenshot...', 'info');
+        const valid = await isRobloxImage(img);
+        if (!valid) throw 'Image rejected: This is not a Roblox screenshot';
+
+        const imgUrl = await uploadCloud(img);
+
+        await insert({
+            type: 'sell',
+            owner_email: user.email,
+            owner_name: localStorage.getItem('lh_username') || user.user_metadata?.name,
+            owner_avatar: user.user_metadata?.picture,
+            data: { title: document.getElementById('sellTitle').value.trim(), description: document.getElementById('sellDesc').value.trim(), previewImage: imgUrl },
+            upload_date: new Date().toISOString(),
+            price: parseInt(document.getElementById('sellPrice').value)
+        });
+
+        document.getElementById('sellForm').reset();
+        showNotif('✅ Listed!', 'success');
+        loadAllAndRender();
+    } catch(e) { showNotif('❌ '+e, 'error'); }
+    btn.disabled=0; btn.textContent='💎 List for Sale';
+}
+
+async function uploadTrade() {
+    if (!user) { showNotif('⚠️ Login first', 'warning'); switchTab('profile'); return; }
+    const btn = document.getElementById('tradeBtn'); btn.disabled=1; btn.textContent='⏳';
+    try {
+        const img = document.getElementById('tradeImg').files[0];
+        if (!img) throw 'Need preview image';
+
+        showNotif('🔄 Checking Roblox screenshot...', 'info');
+        const valid = await isRobloxImage(img);
+        if (!valid) throw 'Image rejected: This is not a Roblox screenshot';
+
+        const imgUrl = await uploadCloud(img);
+
+        await insert({
+            type: 'trade',
+            owner_email: user.email,
+            owner_name: localStorage.getItem('lh_username') || user.user_metadata?.name,
+            owner_avatar: user.user_metadata?.picture,
+            data: { title: document.getElementById('tradeTitle').value.trim(), description: document.getElementById('tradeDesc').value.trim(), previewImage: imgUrl },
+            upload_date: new Date().toISOString()
+        });
+
+        document.getElementById('tradeForm').reset();
+        showNotif('✅ Posted!', 'success');
+        loadAllAndRender();
+    } catch(e) { showNotif('❌ '+e, 'error'); }
+    btn.disabled=0; btn.textContent='🔄 Post Trade';
+}
+
+// ─── Render ────────────────────────────────────────────────────────
+function esc(s) { return (s||'').replace(/[&<>"]/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[a])); }
+
+function cardHTML(item, showDelete) {
+    return `
+        <div class="image-card">
+            <div class="preview-wrapper">
+                ${item.data?.previewImage ? `<img src="${item.data.previewImage}">` : '<div class="no-preview">No preview</div>'}
+            </div>
+            <div class="card-content">
+                <div class="title">${esc(item.data?.title)}</div>
+                ${item.price ? `<div class="price">💰 ${item.price} Robux</div>` : ''}
+                <div class="owner-info">
+                    ${item.owner_avatar ? `<img src="${item.owner_avatar}" onerror="this.style.display='none'">` : ''}
+                    ${esc(item.owner_name)}
+                </div>
+                <div class="description">${esc(item.data?.description)||''}</div>
+                <div style="color:#888;font-size:0.9em;">📅 ${new Date(item.upload_date).toLocaleDateString()}</div>
+                ${item.build_file_url ? `<button class="btn btn-green" onclick="window.open('${item.build_file_url}','_blank')">📥 Download</button>` : ''}
+                ${showDelete ? `<button class="btn btn-red" onclick="delItem('${item.id}')">🗑️ Delete</button>` : ''}
+            </div>
+        </div>
+    `;
+}
+
+async function loadAllAndRender() {
+    const builds = await loadAll('build');
+    const sells = await loadAll('sell');
+    const trades = await loadAll('trade');
+
+    document.getElementById('buildGal').innerHTML = builds.length ? builds.map(b=>cardHTML(b,false)).join('') : '<p style="text-align:center;color:#888;padding:40px;">No builds yet</p>';
+    document.getElementById('sellGal').innerHTML = sells.length ? sells.map(s=>cardHTML(s,false)).join('') : '<p style="text-align:center;color:#888;padding:40px;">No listings yet</p>';
+    document.getElementById('tradeGal').innerHTML = trades.length ? trades.map(t=>cardHTML(t,false)).join('') : '<p style="text-align:center;color:#888;padding:40px;">No trades yet</p>';
+
+    if (user) loadMyUploads();
+}
+
+async function loadMyUploads() {
+    const all = [...await loadAll('build'), ...await loadAll('sell'), ...await loadAll('trade')]
+        .filter(x => x.owner_email === user.email)
+        .sort((a,b) => new Date(b.upload_date) - new Date(a.upload_date));
+
+    document.getElementById('myGal').innerHTML = all.length
+        ? all.map(i => cardHTML(i, true)).join('')
+        : '<p style="text-align:center;color:#888;padding:40px;">No uploads yet</p>';
+}
+
+async function delItem(id) {
+    if (!confirm('🗑️ Delete this item permanently?')) return;
+    try {
+        await deleteItem(id);
+        showNotif('✅ Deleted!', 'success');
+        loadAllAndRender();
+    } catch(e) { showNotif('❌ '+e, 'error'); }
+}
+
+// ─── Tabs ──────────────────────────────────────────────────────────
+function switchTab(t) {
+    document.querySelectorAll('.tab-button').forEach(b=>b.classList.toggle('active',b.dataset.tab===t));
+    document.querySelectorAll('.tab-content').forEach(c=>c.classList.toggle('active',c.id===t));
+    if (t==='profile') renderAuth();
+}
+
+document.querySelectorAll('.tab-button').forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
+document.getElementById('buildForm').onsubmit=e=>{e.preventDefault();uploadBuild()};
+document.getElementById('sellForm').onsubmit=e=>{e.preventDefault();uploadSell()};
+document.getElementById('tradeForm').onsubmit=e=>{e.preventDefault();uploadTrade()};
+
+// ─── Init ──────────────────────────────────────────────────────────
+initAuth().then(loadAllAndRender);
+</script>
 </body>
 </html>
