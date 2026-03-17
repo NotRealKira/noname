@@ -1,1 +1,65 @@
-updating website rn
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Website Updating</title>
+  <style>
+
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      background: url('https://source.unsplash.com/1600x900/?technology,code') 
+      background-size: cover;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: Arial, sans-serif;
+      overflow: hidden;
+    }
+
+    
+    .blur-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      backdrop-filter: blur(8px);
+      background-color: rgba(0, 0, 0, 0.4);
+      z-index: 1;
+    }
+
+    
+    .message {
+      position: relative;
+      z-index: 2;
+      text-align: center;
+      color: white;
+      padding: 30px 50px;
+      border-radius: 10px;
+      background-color: rgba(0, 0, 0, 0.6);
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    }
+
+    .message h1 {
+      margin: 0 0 10px;
+      font-size: 2em;
+    }
+
+    .message p {
+      margin: 0;
+      font-size: 1.2em;
+    }
+  </style>
+</head>
+<body>
+  <div class="blur-overlay"></div>
+  <div class="message">
+    <h1>Website is Updating</h1>
+    <p>We are fixing some bugs. The site will be back within 1–2 days.</p>
+  </div>
+</body>
+</html>
