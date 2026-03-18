@@ -957,8 +957,14 @@ function openDiscord() {
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 async function initAuth() {
-    const { data: { session } } = await sb.auth.getSession();
+    const { data, error } = await sb.auth.getSession();
+    const session = data?.session;
+
     if (session?.user) user = session.user;
+
+    if (window.location.hash.includes('access_token')) {
+        history.replaceState({}, document.title, window.location.pathname);
+    }
 
     sb.auth.onAuthStateChange((evt, sess) => {
         user = sess?.user || null;
@@ -973,8 +979,11 @@ async function initAuth() {
 async function gmailLogin() {
     const { error } = await sb.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: 'https://notrealkira.github.io' }
+        options: {
+            redirectTo: window.location.origin
+        }
     });
+
     if (error) showNotif(error.message, 'error');
 }
 
