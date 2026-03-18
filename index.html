@@ -973,7 +973,7 @@ async function initAuth() {
 async function gmailLogin() {
     const { error } = await sb.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: 'https://lexushubcatalogue.netlify.app/' }
+        options: { redirectTo: 'https://notrealkira.github.io' }
     });
     if (error) showNotif(error.message, 'error');
 }
